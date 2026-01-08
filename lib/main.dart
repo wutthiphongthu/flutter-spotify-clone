@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_spotify_clone/constantes/font.dart';
+import 'screens/home_screen.dart';
+import 'screens/search_screen.dart';
+import 'screens/library_screen.dart';
+import 'screens/premium_screen.dart';
+import 'screens/profile_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -37,16 +43,6 @@ class MyApp extends StatelessWidget {
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
   final String title;
 
   @override
@@ -54,69 +50,267 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+  int _selectedIndex = 0;
 
-  void _incrementCounter() {
+  void _onItemTapped(int index) {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _selectedIndex = index;
     });
+  }
+
+  Widget _getScreen(int index) {
+    switch (index) {
+      case 0:
+        return const HomeScreen();
+      case 1:
+        return const SearchScreen();
+      case 2:
+        return const LibraryScreen();
+      case 3:
+        return const PremiumScreen();
+      case 4:
+        return const ProfileScreen();
+      default:
+        return const HomeScreen();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+      appBar: _customAppBar(_selectedIndex),
+      body: _getScreen(_selectedIndex),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: Colors.black,
+        selectedItemColor: Colors.white,
+        unselectedItemColor: Colors.grey.shade400,
+        selectedIconTheme: const IconThemeData(color: Colors.white),
+        unselectedIconTheme: IconThemeData(color: Colors.grey.shade400),
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        type: BottomNavigationBarType.fixed,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            activeIcon: Icon(Icons.home_filled),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.search),
+            activeIcon: Icon(Icons.search, size: 24),
+            label: 'Search',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.library_music),
+            activeIcon: Icon(Icons.library_music_rounded),
+            label: 'Your Library',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.workspace_premium),
+            label: 'Premium',
+          ),
+          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+        ],
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+    );
+  }
+
+  _customAppBar(int tabIndex) {
+    return AppBar(
+      title: _getTitleWidget(tabIndex),
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      centerTitle: true,
+      titleSpacing: 0,
+      leading: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: _leadingIcon('C'),
+      ),
+      leadingWidth: 50,
+      elevation: 0,
+      iconTheme: const IconThemeData(color: Colors.white),
+    );
+  }
+
+  Widget _getTitleWidget(int tabIndex) {
+    switch (tabIndex) {
+      case 0:
+        return DefaultTitleWidget(onFilterChanged: (filter) {});
+      case 1:
+        return _title('Search');
+      case 2:
+        return _title('Your Library');
+      case 3:
+        return _title('Premium');
+      case 4:
+        return _title('Profile');
+      default:
+        return DefaultTitleWidget(onFilterChanged: (filter) {});
+    }
+  }
+
+  Row _title(String title) {
+    return Row(
+      children: [
+        Text(
+          title,
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        ),
+      ],
+    );
+  }
+
+  _leadingIcon(String s) {
+    return Container(
+      width: 40, // กำหนดความกว้าง
+      height: 40, // กำหนดความสูง
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.green.shade600,
+      ),
+      child: Center(
+        child: Text(
+          s.substring(0, 1).toUpperCase(),
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}
+
+class DefaultTitleWidget extends StatefulWidget {
+  final Function(dynamic filter) onFilterChanged;
+  const DefaultTitleWidget({super.key, required this.onFilterChanged});
+
+  @override
+  State<DefaultTitleWidget> createState() => _DefaultTitleWidgetState();
+}
+
+class _DefaultTitleWidgetState extends State<DefaultTitleWidget> {
+  int selectedFilter = 1;
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        FilterItem(
+          onSelected: (filter) {},
+          selected: selectedFilter == 0,
+          text: 'All',
+          index: 0,
+        ),
+        FilterItem(
+          onSelected: (filter) {},
+          selected: selectedFilter == 1,
+          text: 'Music',
+          index: 1,
+        ),
+        FilterItem(
+          onSelected: (filter) {},
+          selected: selectedFilter == 2,
+          text: 'Podcast',
+          index: 2,
+        ),
+        FilterItem(
+          onSelected: (filter) {},
+          selected: selectedFilter == 3,
+          text: 'Wrapper',
+          index: 3,
+          spacial: true,
+        ),
+      ],
+    );
+  }
+}
+
+class FilterItem extends StatefulWidget {
+  final String text;
+  final Function(dynamic filter) onSelected;
+  final bool selected;
+  final int index;
+  final bool spacial;
+  const FilterItem({
+    super.key,
+    required this.text,
+    required this.onSelected,
+    required this.selected,
+    required this.index,
+    this.spacial = false,
+  });
+
+  @override
+  State<FilterItem> createState() => _FilterItemState();
+}
+
+class _FilterItemState extends State<FilterItem> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(right: 4, left: 4),
+      decoration: BoxDecoration(
+        color: widget.selected ? Colors.grey.shade800 : null,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+            decoration: BoxDecoration(
+              color: widget.selected ? Colors.green : Colors.grey.shade800,
+              borderRadius: BorderRadius.circular(20),
+              border:
+                  widget.spacial
+                      ? Border.all(color: Colors.white, width: 1)
+                      : null,
+            ),
+            child: Row(
+              children: [
+                Text(
+                  widget.text,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: ConstantsFont.defaultFontSize,
+                    fontWeight:
+                        widget.spacial ? FontWeight.w700 : FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (widget.selected) _moreMenu(index: widget.index),
+        ],
+      ),
+    );
+  }
+
+  _moreMenu({required index}) {
+    return Row(
+      children: [
+        InkWell(
+          onTap: () {},
+          child: Container(
+            padding: EdgeInsets.only(right: 10, left: 6),
+            decoration: BoxDecoration(),
+            child: Text(
+              'Following',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: ConstantsFont.defaultFontSize,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
