@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_spotify_clone/constantes/font.dart';
+import 'package:flutter_spotify_clone/core/app/app_theme.dart';
+import 'package:flutter_spotify_clone/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:flutter_spotify_clone/features/auth/presentation/pages/auth_gate.dart';
+import 'package:flutter_spotify_clone/features/auth/presentation/pages/login_screen.dart';
+import 'package:flutter_spotify_clone/core/di/injection.dart';
+import 'package:flutter_spotify_clone/core/navigation/navigator_util.dart';
 import 'screens/home_screen.dart';
 import 'screens/search_screen.dart';
 import 'screens/library_screen.dart';
 import 'screens/premium_screen.dart';
 import 'screens/profile_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await configureDependencies();
   runApp(const MyApp());
 }
 
@@ -16,106 +25,108 @@ class MyApp extends StatelessWidget {
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+    return MultiBlocProvider(
+      providers: [BlocProvider(create: (_) => getIt<AuthBloc>())],
+      child: MaterialApp(
+        title: 'Flutter Demo',
+        theme: AppTheme.darkTheme(),
+        navigatorKey: NavigatorUtil.navigatorKey,
+        routes: {
+          '/login': (_) => const LoginScreen(),
+          '/home': (_) => const MainShell(),
+        },
+        home: const AuthGate(),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-  final String title;
+class MainShell extends StatefulWidget {
+  const MainShell({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MainShell> createState() => _MainShellState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  Widget _getScreen(int index) {
-    switch (index) {
-      case 0:
-        return const HomeScreen();
-      case 1:
-        return const SearchScreen();
-      case 2:
-        return const LibraryScreen();
-      case 3:
-        return const PremiumScreen();
-      case 4:
-        return const ProfileScreen();
-      default:
-        return const HomeScreen();
+    if (_selectedIndex == index) {
+      _navigatorKeys[index].currentState?.popUntil((route) => route.isFirst);
+      return;
     }
+    setState(() => _selectedIndex = index);
   }
 
+  final _navigatorKeys = List.generate(5, (_) => GlobalKey<NavigatorState>());
+
+  final _tabRootPages = const [
+    HomeScreen(),
+    SearchScreen(),
+    LibraryScreen(),
+    PremiumScreen(),
+    ProfileScreen(),
+  ];
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: _customAppBar(_selectedIndex),
-      body: _getScreen(_selectedIndex),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.black,
-        selectedItemColor: Colors.white,
-        unselectedItemColor: Colors.grey.shade400,
-        selectedIconTheme: const IconThemeData(color: Colors.white),
-        unselectedIconTheme: IconThemeData(color: Colors.grey.shade400),
-        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
-        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
-        showSelectedLabels: true,
-        showUnselectedLabels: true,
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            activeIcon: Icon(Icons.home_filled),
-            label: 'Home',
+    return WillPopScope(
+      onWillPop: () async {
+        final currentNavigator = _navigatorKeys[_selectedIndex].currentState;
+        if (currentNavigator != null && currentNavigator.canPop()) {
+          currentNavigator.pop();
+          return false;
+        }
+        return true;
+      },
+      child: Scaffold(
+        appBar: _customAppBar(_selectedIndex),
+        body: IndexedStack(
+          index: _selectedIndex,
+          children: List.generate(
+            _tabRootPages.length,
+            (index) => _TabNavigator(
+              navigatorKey: _navigatorKeys[index],
+              rootPage: _tabRootPages[index],
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.search),
-            activeIcon: Icon(Icons.search, size: 24),
-            label: 'Search',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.library_music),
-            activeIcon: Icon(Icons.library_music_rounded),
-            label: 'Your Library',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.workspace_premium),
-            label: 'Premium',
-          ),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-        ],
+        ),
+        bottomNavigationBar: BottomNavigationBar(
+          backgroundColor: Colors.black,
+          selectedItemColor: Colors.white,
+          unselectedItemColor: Colors.grey.shade400,
+          selectedIconTheme: const IconThemeData(color: Colors.white),
+          unselectedIconTheme: IconThemeData(color: Colors.grey.shade400),
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          type: BottomNavigationBarType.fixed,
+          currentIndex: _selectedIndex,
+          onTap: _onItemTapped,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home),
+              activeIcon: Icon(Icons.home_filled),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.search),
+              activeIcon: Icon(Icons.search, size: 24),
+              label: 'Search',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.library_music),
+              activeIcon: Icon(Icons.library_music_rounded),
+              label: 'Your Library',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.workspace_premium),
+              label: 'Premium',
+            ),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          ],
+        ),
       ),
     );
   }
@@ -183,6 +194,23 @@ class _MyHomePageState extends State<MyHomePage> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _TabNavigator extends StatelessWidget {
+  const _TabNavigator({required this.navigatorKey, required this.rootPage});
+
+  final GlobalKey<NavigatorState> navigatorKey;
+  final Widget rootPage;
+
+  @override
+  Widget build(BuildContext context) {
+    return Navigator(
+      key: navigatorKey,
+      onGenerateRoute: (settings) {
+        return MaterialPageRoute(builder: (_) => rootPage);
+      },
     );
   }
 }
